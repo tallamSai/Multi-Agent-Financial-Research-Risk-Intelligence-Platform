@@ -1,0 +1,124 @@
+# LiteLLM proxy config — Sprint 8 Day 1
+#
+# Routes every chat-completion call through a single OpenAI-compatible
+# endpoint at http://litellm:4000/v1. Sprint 8 Day 2 refactors llm_factory.py
+# to use this gateway; Day 3 layers a Redis semantic cache on top.
+#
+# Model-name conventions:
+#   - We expose Sprint 7.9 canonical model names (e.g. "claude-sonnet-4-6")
+#     as the user-facing identifier
+#   - The actual underlying provider model is named via `litellm_params.model`
+#     using LiteLLM's provider/model syntax ("anthropic/claude-sonnet-4-6")
+#   - Callers (llm_factory.py, langchain) just say "claude-sonnet-4-6"
+#     and don't need to know about the provider routing
+#
+# API keys come from the LiteLLM container's environment (passed via
+# docker-compose env_file) — NEVER hard-coded here.
+
+model_list:
+  # ─── Anthropic (Sprint 7.9 canonical generator/synthesize/HITL) ───
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-haiku-4-5
+    litellm_params:
+      model: anthropic/claude-haiku-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # Opus 4.7 kept available for ad-hoc use even though Sprint 7.9 dropped it
+  # from the HITL canonical (Vectara hallucination benchmarks favored Sonnet)
+  - model_name: claude-opus-4-7
+    litellm_params:
+      model: anthropic/claude-opus-4-7
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ─── OpenAI (decompose / sufficiency / eval judges / fallback) ───
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  # ─── Groq (router / grader / query rewriter — Llama 3.3 free tier) ───
+  - model_name: llama-3.3-70b-versatile
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+
+  # ─── Embeddings (Sprint 8 8b: backs the redis-semantic cache) ───
+  # The semantic cache hashes incoming queries with this model and looks
+  # them up by cosine similarity in Redis. Same model the rest of the
+  # stack uses for non-finance corpora; voyage-finance-2 sits outside
+  # the proxy because it routes through src/services/embeddings.py
+  # directly via the Voyage SDK.
+  - model_name: text-embedding-3-small
+    litellm_params:
+      model: openai/text-embedding-3-small
+      api_key: os.environ/OPENAI_API_KEY
+
+# ─── Routing strategy ───
+# Sprint 8 Day 1 keeps it minimal: no fallback chains yet. Day 2 will add
+# fallbacks once we verify the basic routing + prompt-caching pass-through
+# works end-to-end.
+router_settings:
+  routing_strategy: simple-shuffle
+  num_retries: 2
+  request_timeout: 120
+
+# ─── General settings ───
+litellm_settings:
+  # Drop unsupported params silently (e.g. `temperature` on Opus 4.7 — though
+  # Sprint 7.9 dropped Opus from the canonical so this rarely fires)
+  drop_params: true
+  # Forward Anthropic prompt-caching headers transparently (verified Day 2)
+  set_verbose: false
+  # Per-process budget guardrails — Sprint 8 Day 1 sets dev caps; Day 2 will
+  # tune to per-key budgets after verifying the proxy works
+  max_budget: 10.0
+  budget_duration: 24h
+  # ── Sprint 8 8b: Redis-backed semantic cache ──
+  # Two questions get the same cached answer when their query embeddings
+  # cosine-match above `similarity_threshold`. We use a high 0.95 threshold
+  # because false-positive cache hits in a financial-Q&A system are
+  # actively harmful (returning the wrong answer is worse than re-running).
+  # Embedding model: `text-embedding-3-small` — same model the rest of the
+  # stack already uses, dispatched via a route entry below.
+  cache: true
+  cache_params:
+    type: redis-semantic
+    similarity_threshold: 0.95
+    # Embedding model name resolves through the proxy's own model_list
+    # (see `text-embedding-3-small` route below), so the cache lookup
+    # itself is also gateway-mediated.
+    redis_semantic_cache_embedding_model: text-embedding-3-small
+    # NOTE on Redis connection: LiteLLM's semantic-cache layer reads the
+    # connection details from the `REDIS_HOST` / `REDIS_PORT` env vars on
+    # the proxy container (set in docker-compose.yml). The `os.environ/*`
+    # template syntax does NOT substitute inside cache_params, so we keep
+    # them as env vars rather than as nested keys here.
+    # Production-grade extension would add a TTL + REDIS_PASSWORD.
+
+  # ── Sprint 8 8c: forward every LLM call to self-hosted Langfuse ──
+  # The langfuse-web container is auto-seeded with project keys
+  # (LANGFUSE_INIT_PROJECT_*) that match the LANGFUSE_PUBLIC_KEY /
+  # LANGFUSE_SECRET_KEY env vars on this container, so traces land in
+  # the right project on first boot — no manual UI step required.
+  # `failure_callback` ensures we also see errored calls in the trace UI,
+  # which is useful for debugging quota/timeout/format failures.
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]
+  # Don't include raw user input in the trace payload metadata; the
+  # message body itself is captured but PII passing through this path
+  # already runs Presidio in the rag-agent's own guardrails node.
+  redact_user_api_key_info: true
+
+general_settings:
+  # We don't need master-key auth in Day 1 (single-tenant local dev). Day 2 or
+  # Sprint 9 may add per-user virtual keys when the admin panel lands.
+  store_model_in_db: false

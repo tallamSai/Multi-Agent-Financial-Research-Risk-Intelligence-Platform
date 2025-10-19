@@ -1,0 +1,138 @@
+name: Smoke install
+
+# Cheap install-path smoke test. Catches the wheel + CLI-import + doctor
+# regressions that the 0.1.x cycle proved are easy to miss locally because
+# the maintainer always has a populated state.
+#
+# Does NOT spin up the backend stack — that's the heavy smoke in the
+# release-image.yml workflow's `verify` job, only run on tag pushes (since
+# it needs the just-published GHCR image to exist).
+#
+# What this catches:
+#   - Wheel structure broken (sdist or wheel metadata corruption)
+#   - Top-level CLI imports fail (deferred-import regressions)
+#   - financebench --help / version / doctor regression (smoke-only)
+#   - Doctor crash on missing optional dependency
+#
+# Does NOT catch (those need the stack up):
+#   - Container runtime bugs (peft missing, hf_cache permissions, etc.)
+#   - /v1/warm component failures
+#   - Real chat-query regressions
+#
+# Runtime: ~2-3 min. Free CI on the public repo.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  # Opt actions into Node24 ahead of the June 2026 Node20 removal (Linux runners).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  wheel-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Version consistency
+        # Pure stdlib check (no backend deps) — asserts every hard-coded version
+        # matches pyproject. Runs here because a version-only bump doesn't touch
+        # eval.yml's path filters, and this is the workflow that fires on every
+        # push/PR to main (where a bump lands). Catches the 0.3.4-class miss.
+        # --noconftest skips tests/conftest.py (it imports backend deps this job
+        # deliberately doesn't install); -c /dev/null ignores the pyproject
+        # pytest config (asyncio plugin etc.) — this test needs neither.
+        run: |
+          pip install pytest
+          pytest -c /dev/null --noconftest -q tests/unit/test_version_consistency.py
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build wheel + sdist
+        run: |
+          rm -rf dist build
+          python -m build
+
+      - name: twine check (metadata + readme)
+        run: |
+          pip install twine
+          python -m twine check dist/*
+
+      - name: Fresh-venv install
+        # Mirrors what an end user does after pip install. Uses a venv to
+        # isolate from the runner's site-packages so we catch transitive-
+        # dep issues.
+        run: |
+          python -m venv /tmp/smoke-venv
+          /tmp/smoke-venv/bin/pip install --upgrade pip
+          /tmp/smoke-venv/bin/pip install dist/*.whl
+          echo "Site-packages size:"
+          du -sh /tmp/smoke-venv/lib/python3.12/site-packages | awk '{print $1}'
+
+      - name: financebench --help
+        # Catches top-level import errors that block the CLI from running
+        # at all (0.1.2-class regression: CLI broke at first import because
+        # httpx-sse + prompt_toolkit lived in the gated [cli] extra).
+        run: /tmp/smoke-venv/bin/financebench --help
+
+      - name: financebench version
+        # Catches version-string regression (mismatch between the wheel's
+        # declared version and what __version__ reports).
+        run: |
+          set -e
+          version=$(/tmp/smoke-venv/bin/financebench version)
+          echo "Installed CLI version: $version"
+          # Cross-check against pyproject.toml
+          declared=$(grep -E '^version =' pyproject.toml | head -1 | cut -d'"' -f2)
+          echo "pyproject version: $declared"
+          if [ "$version" != "$declared" ]; then
+            echo "ERROR: Installed version ($version) doesn't match pyproject ($declared)"
+            exit 1
+          fi
+
+      - name: financebench doctor --skip-network
+        # System + Resources + Ports sections only. Skips PyPI/GitHub/Docker
+        # Hub reachability so the test doesn't depend on outbound network
+        # to those specific endpoints (the runner has network but flaky
+        # third-party probes shouldn't fail the smoke).
+        #
+        # In a fresh ubuntu-latest container, docker IS available but the
+        # daemon may not be running. Doctor will flag docker-daemon as
+        # blocking. We allow non-zero exit here because we're testing the
+        # binary runs and reports cleanly, not the GitHub runner's docker
+        # setup.
+        run: |
+          set +e
+          /tmp/smoke-venv/bin/financebench doctor --skip-network
+          rc=$?
+          # Exit 0 = clean / warnings only; exit 1 = blocking failure.
+          # Either is fine for the smoke — we're just checking the command
+          # doesn't crash with a Python exception. A genuine crash would
+          # produce exit codes other than 0/1.
+          if [ "$rc" -gt 1 ]; then
+            echo "ERROR: doctor crashed with exit $rc (expected 0 or 1)"
+            exit "$rc"
+          fi
+          exit 0
+
+      # Note: no pytest step here. tests/conftest.py imports src.models.state
+      # which transitively needs langchain_core — a backend dep. Installing
+      # .[backend] for the smoke would add ~5 min + ~300 MB (torch +
+      # sentence-transformers + langgraph) and defeat the "cheap" purpose.
+      # The doctor checks above (`financebench doctor --skip-network`)
+      # already catch doctor-class regressions; the full unit-test suite
+      # runs locally during development against a backend-installed env.

@@ -1,0 +1,187 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+.env.bak
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Data (raw PDFs can be large)
+data/raw/
+# Raw SEC HTMLs (downloaded; regenerable via scripts/download_sec_filings.py)
+data/raw/sec/
+
+# Qdrant local storage
+qdrant_data/
+
+# Postgres local data
+pg_data/
+
+# Sprint 7.17 grader LoRA-FT v1 exploratory artifacts (Signal 12 failure — base
+# model 45× below the validated capacity floor). Kept locally for ablation
+# reproducibility; not tracked because the experiment is documented in
+# docs/engineering-log.md Sprint 7.17 and the adapter outputs aren't reusable.
+data/models/grader_ft_v1_hard_r8/
+data/models/grader_ft_v1_mixed_r8/
+data/models/grader_ft_v1_random_r8/
+data/training/grader_ft_v1/
+
+# Evaluation results (regenerated)
+tests/evaluation/eval_results/*.json
+# ...except committed baselines, sprint milestone snapshots, and final results
+!tests/evaluation/eval_results/baseline_*.json
+!tests/evaluation/eval_results/after_sprint*.json
+!tests/evaluation/eval_results/final_*.json
+# Canonical milestone results under the calibrated Sonnet 4.6 + v2 judge (κ=0.932)
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_v1_grader.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_v1_grader.correctness.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_v1_grader.rejudged_sonnet_v2.correctness.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_v1_grader.rejudged_sonnet_v2.diff.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_4fix_plus_fix2.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_4fix_plus_fix2.correctness.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_4fix_plus_fix2.rejudged_sonnet_v2.correctness.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_4fix_plus_fix2.rejudged_sonnet_v2.diff.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_4fix_plus_fix2.ragas.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_4fix_plus_fix2.deepeval.json
+# Sprint 7.16 milestone (gen-v2 = anti-refusal nudge + enumerate-fully clause 8)
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_gen_v2.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_gen_v2.correctness.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_gen_v2.rejudged_sonnet_v2.correctness.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_gen_v2.rejudged_sonnet_v2.diff.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_gen_v2.ragas.json
+!tests/evaluation/eval_results/financebench_pypdf_voyage_tiered_ft_litellm_gen_v2.deepeval.json
+# Sprint 7.16 validation artifacts
+!tests/evaluation/eval_results/validation_antirefusal_nudge.json
+!tests/evaluation/eval_results/validation_enumerate_fully.json
+!tests/evaluation/eval_results/validation_directional_clause9.json
+# Sprint 7.16 diagnostic artifacts (audit refresh + retrieval/reranker attribution + grader-on-gold)
+!tests/evaluation/eval_results/audit_failed_qs_gen_v2.json
+!tests/evaluation/eval_results/diag2_retrieval_reranker_attribution.json
+!tests/evaluation/eval_results/diag3_grader_on_gold_chunks.json
+# Sprint 7.17 grader-architecture experiment results
+!tests/evaluation/eval_results/grader_ft_v1_component_eval.json
+!tests/evaluation/eval_results/grader_models_compare.json
+!tests/evaluation/eval_results/grader_haiku_max2048.json
+# Sprint 7.17 follow-up: Caveat B falsification + Llama 3.3 70B via Fireworks
+!tests/evaluation/eval_results/grader_haiku_system_split.json
+!tests/evaluation/eval_results/grader_fireworks_llama33_70b.json
+# Sprint 7.17 follow-up #3: full 150-Q FinanceBench eval w/ Llama-3.3-70B grader (OpenRouter)
+!tests/evaluation/eval_results/financebench_openrouter_llama_grader_v1.json
+!tests/evaluation/eval_results/financebench_openrouter_llama_grader_v1.correctness.json
+!tests/evaluation/eval_results/financebench_openrouter_llama_grader_v1.rejudged_sonnet_v2.correctness.json
+!tests/evaluation/eval_results/financebench_openrouter_llama_grader_v1.rejudged_sonnet_v2.diff.json
+# Sprint 7.18a: RETRIEVAL_TOP_K=50→200 to recover RETRIEVAL_MISS bucket
+!tests/evaluation/eval_results/financebench_retrieval_topk_200_v1.json
+!tests/evaluation/eval_results/financebench_retrieval_topk_200_v1.correctness.json
+!tests/evaluation/eval_results/financebench_retrieval_topk_200_v1.rejudged_sonnet_v2.correctness.json
+!tests/evaluation/eval_results/financebench_retrieval_topk_200_v1.rejudged_sonnet_v2.diff.json
+# Sprint 7.19 Step 0: FT v1 reranker re-enabled (RERANKER_ADAPTER_PATH bug fix)
+!tests/evaluation/eval_results/financebench_ft_v1_reranker_active_v1.json
+!tests/evaluation/eval_results/financebench_ft_v1_reranker_active_v1.correctness.json
+!tests/evaluation/eval_results/financebench_ft_v1_reranker_active_v1.rejudged_sonnet_v2.correctness.json
+!tests/evaluation/eval_results/financebench_ft_v1_reranker_active_v1.rejudged_sonnet_v2.diff.json
+# Methodology artifacts referenced in docs/engineering-log.md
+!tests/evaluation/eval_results/audit_failed_qs_v1_grader.json
+!tests/evaluation/eval_results/audit_failed_qs_4fix.json
+!tests/evaluation/eval_results/hallu_model_ablation.json
+!tests/evaluation/eval_results/slice_analysis_4fix_plus_fix2.json
+!tests/evaluation/eval_results/pipeline_diagnostic_results.json
+# ...but re-ignore pipeline caches (they're intermediate, regenerated on each run)
+tests/evaluation/eval_results/*.pipeline.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Docker
+*.log
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# Runtime logs (from restart.sh)
+logs/
+
+# Claude Code local tool state
+.claude/
+CLAUDE.md
+
+# Internal planning / session notes — kept locally for context, not in public repo.
+# The polished public-facing version of this material lives in docs/engineering-log.md.
+SESSION_HANDOFF.md
+IMPLEMENTATION_PLAN.md
+IMPROVEMENT_PLAN.md
+PROJECT_MASTER_DOCUMENT.md
+DEPLOYMENT_PLAN.md
+COMMANDS.txt
+
+# CampusX course materials (reference tutorials, not part of project)
+_course_materials/
+
+# Personal scratch
+Untitled.txt
+
+# Cost tracker — internal LLM spend audit trail, kept locally only
+cost_logs/
+
+# Sprint 7.19 Step 1: FT v2 reranker full FinanceBench eval (the actual gate)
+!tests/evaluation/eval_results/financebench_ft_v2_reranker_active_v1.json
+!tests/evaluation/eval_results/financebench_ft_v2_reranker_active_v1.correctness.json
+!tests/evaluation/eval_results/financebench_ft_v2_reranker_active_v1.rejudged_sonnet_v2.correctness.json
+!tests/evaluation/eval_results/financebench_ft_v2_reranker_active_v1.rejudged_sonnet_v2.diff.json
+!tests/evaluation/eval_results/eval_reranker_stratified_v2.json
+
+# Sprint 7.19 Step 1 partial-adapter backups (kept locally for ablation, not pushed)
+data/models/reranker_ft_v2_local_partial/
+data/models/reranker_ft_v2_partial_epoch1/
+
+# Publishing assets (mockups, reference images, drafts) — kept local
+publish-assets/
+
+# M1 install-path test logs — may contain pasted API keys from wizard prompts
+# until 0.1.4 introduces masked-input. Kept local-only by rule, not by accident.
+tests/m1-test/
+
+# Docker Desktop disk image backup — 65 GB sparse file, restore point for the
+# 2026-06-02 disk-full event. Cloned via APFS cp -c so it lives at near-zero
+# extra cost on disk, but huge if accidentally pushed.
+Docker-backup-*.raw
+
+# Pre-shipping cleanup checklist (local-only planning doc paired with
+# DEPLOYMENT_PLAN.md). Captures all package-content audit findings and
+# what's been deferred — internal hygiene record, not for the public repo.
+CLEANUP_PLAN.md
+
+# Diagram authoring specs (scaffolding handed to the Excalidraw tool) — kept local.
+# The rendered PNGs + .excalidraw sources under art/ are committed; the verbose
+# generator-emitted spec markdown is not.
+docs/diagrams/excalidraw/*.md
+
+# Personal docs (resume etc.) — contains phone/email/address, must never be
+# pushed to the public repo. Kept local for drafting profile/article copy.
+about-me/

@@ -1,0 +1,42 @@
+MULTI-AGENT FINANCIAL RESEARCH & RISK INTELLIGENCE PLATFORM — PROJECT DOSSIER
+
+PROBLEM STATEMENT
+Financial-document research needs evidence-grounded answers, controlled access,
+traceability, and human review for high-stakes output. Basic chatbot retrieval
+does not reliably handle decomposition, multi-source evidence, or governance.
+
+OBJECTIVES AND SOLUTION
+The platform combines selective RAG, BGE cross-encoder reranking, LangGraph
+agent workflows, RBAC, HITL approval, persistent workflow state, tracing, and
+evaluation. Simple requests follow direct retrieval; complex requests are
+decomposed into sub-questions, evidence is retrieved and graded, sufficiency is
+checked, and grounded answers are synthesized.
+
+METHODOLOGY
+Embed the query, retrieve candidates, rerank evidence, and enforce document
+permissions through metadata filtering before generation. For research tasks,
+iterate evidence collection where needed. Check grounding before release and
+pause high-stakes responses for explicit approval. Checkpointing retains state
+through approval waits and service restarts.
+
+RESULTS, METRICS, AND ACHIEVEMENTS
+FinanceBench correctness is 72.7% (109/150). Refusal rate is 6.7%; RAGAS
+faithfulness is 0.747; DeepEval faithfulness is 0.844; contextual recall is
+0.768. Documentation reports 347 passing tests in its configured environment.
+Implemented retrieval, reranking, agent routing, authorization-aware retrieval,
+HITL controls, evaluation, container deployment, and observability. These are
+benchmark results, not investment-performance guarantees.
+
+TECH STACK
+Python 3.12; FastAPI; LangGraph; PostgreSQL; Redis; Qdrant; BGE; LiteLLM;
+Langfuse; Docker Compose; GitHub Actions; configurable Claude/GPT/Llama models.
+
+RUN AND TEST
+  python -m venv .venv
+  .venv\Scripts\Activate.ps1
+  pip install -e ".[backend,dev]"
+  Copy-Item .env.example .env
+  docker compose up -d
+  pytest
+Set credentials in .env. Local collection currently needs the missing langgraph
+package installed before the test suite can execute.
